@@ -6,7 +6,8 @@ import numpy as np
 lower = np.array([150, 128, 30])
 upper = np.array([180, 255, 255])
 #GET ANGLE
-ANGLE_THRESHOLD = 1.05
+ANGLE_CENTER    = 0.9880570929216429
+ANGLE_THRESHOLD = 1.02
 ##########################################
 
 cap = cv2.VideoCapture(0)
@@ -40,20 +41,18 @@ while cap.isOpened():
     rightArea = -1
     if x != -1 and y != -1:
         leftMask = mask[:, 0:x]
-        
         leftArea = cv2.countNonZero(leftMask)
-        rightArea = area - leftArea
+        rightArea = (area - leftArea)*ANGLE_CENTER
 
-    print(str(leftArea) + ":" + str(rightArea))
     if leftArea <= 0 or rightArea <= 0:
         print("None")
     elif 1/ANGLE_THRESHOLD < leftArea/rightArea and leftArea/rightArea < ANGLE_THRESHOLD:
-        print("Front")
+        print("Front : " + str(leftArea/rightArea))
     else:
         if leftArea > rightArea:
-            print("Left")
+            print("Left : " + str(leftArea/rightArea))
         else:
-            print("Right")
+            print("Right : " + str(leftArea/rightArea))
 
     #Esc
     if cv2.waitKey(5) & 0xFF == 27:
