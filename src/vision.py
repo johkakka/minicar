@@ -5,9 +5,10 @@ import numpy as np
 #COLOR MASK
 lower = np.array([150, 128, 30])
 upper = np.array([180, 255, 255])
-#GET ANGLE
-ANGLE_CENTER    = 0.9880570929216429
-ANGLE_THRESHOLD = 1.02
+
+#AREA and DISTANCE
+AREA_REFERENCE = 20000  # [px]
+DIST_REFERENCE = 1000   # [mm]
 ##########################################
 
 cap = cv2.VideoCapture(0)
@@ -34,27 +35,17 @@ while cap.isOpened():
     cv2.imshow('frame' , frame)
     cv2.imshow('mask', mask)
 
-    #calc areas and angle
+    # calc areas and dist
     area = cv2.countNonZero(mask)
-
-    leftArea = -1
-    rightArea = -1
-    if x != -1 and y != -1:
-        leftMask = mask[:, 0:x]
-        leftArea = cv2.countNonZero(leftMask)
-        rightArea = (area - leftArea)*ANGLE_CENTER
-
-    if leftArea <= 0 or rightArea <= 0:
-        print("None")
-    elif 1/ANGLE_THRESHOLD < leftArea/rightArea and leftArea/rightArea < ANGLE_THRESHOLD:
-        print("Front : " + str(leftArea/rightArea))
+    if area != 0:
+        rate = AREA_REFERENCE/area
     else:
-        if leftArea > rightArea:
-            print("Left : " + str(leftArea/rightArea))
-        else:
-            print("Right : " + str(leftArea/rightArea))
+        rate = np.Infinity
 
-    #Esc
+    dist = DIST_REFERENCE * np.sqrt(rate)
+    print(dist)
+
+    # Esc
     if cv2.waitKey(5) & 0xFF == 27:
         break
 
