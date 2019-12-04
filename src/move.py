@@ -4,24 +4,50 @@ import time
 import RPi.GPIO as GPIO
 
 ###### CONSTANT VALUE CONFIGURATION ######
+COLOR = "yellow"
+
 #COLOR MASK
-lower = np.array([150, 128, 30])
-upper = np.array([180, 255, 255])
+R_lower = np.array([150, 64, 30])
+R_upper = np.array([180, 255, 255])
+Y_lower = np.array([15, 80, 120])
+Y_upper = np.array([40, 200, 255])
+G_lower = np.array([60, 0, 30])
+G_upper = np.array([90, 80, 255])
 
 #AREA and DISTANCE
-AREA_REFERENCE = 8500  # [px]
-DIST_REFERENCE = 1000   # [mm]
+R_AREA_REFERENCE = 183  # [px]
+R_DIST_REFERENCE = 4870   # [mm]
+Y_AREA_REFERENCE = 183  # [px]
+Y_DIST_REFERENCE = 4870   # [mm]
+G_AREA_REFERENCE = 183  # [px]
+G_DIST_REFERENCE = 4870   # [mm]
 
 #target
-DIST_TARGET = -1200 # [mm]
+DIST_TARGET = -2000 # [mm]
 
 #GAIN
-DIST_P_GAIN = 0.003
-ANGLE_P_GAIN = 0.001
+DIST_P_GAIN = 0.01
+ANGLE_P_GAIN = 0.04
 
-#othor
-d = 70
 ##########################################
+
+# conf
+if COLOR == "red":
+    lower = R_lower
+    upper = R_upper
+    AREA_REFERENCE = R_AREA_REFERENCE
+    DIST_REFERENCE = R_DIST_REFERENCE
+elif COLOR == "green":
+    lower = G_lower
+    upper = G_upper
+    AREA_REFERENCE = G_AREA_REFERENCE
+    DIST_REFERENCE = G_DIST_REFERENCE
+else:
+    lower = Y_lower
+    upper = Y_upper
+    AREA_REFERENCE = Y_AREA_REFERENCE
+    DIST_REFERENCE = Y_DIST_REFERENCE
+
 
 def main():
     cap = cv2.VideoCapture(0)
@@ -48,6 +74,8 @@ def main():
         dist = DIST_REFERENCE * np.sqrt(rate)
         # print(dist)
 
+        if dist < 400:
+            break
 
         # get center
         if area != 0:
@@ -66,10 +94,10 @@ def main():
         e_angle = x - width/2
 
         # calc input [P]
-        l_input = e_dist * DIST_P_GAIN + d * e_angle * ANGLE_P_GAIN
-        r_input = e_dist * DIST_P_GAIN - d * e_angle * ANGLE_P_GAIN
+        l_input = e_dist * DIST_P_GAIN + e_angle * ANGLE_P_GAIN
+        r_input = e_dist * DIST_P_GAIN - e_angle * ANGLE_P_GAIN
 
-        print("e_dist = " + str(e_dist) + " ,e_x = " + str(e_angle) + " -> " + str(l_input) + ", " + str(r_input))
+        print("e_dist = " + str(dist) + " ,e_x = " + str(e_angle) + " -> " + str(l_input) + ", " + str(r_input))
 
         run(l_input, r_input)
 
@@ -82,34 +110,19 @@ def main():
 
 
 def analysis_blob(binary_img):
-    if cv2.countNonZero(binary_img) <= 0:
-        maxblob = {}
-
-        maxblob["upper_left"] = {0, 0}
-        maxblob["width"] = 0
-        maxblob["height"] = 0
-        maxblob["area"] = 0
-        maxblob["center"] = {0, 0}
-
-        return maxblob
-
-    label = cv2.connectedComponentsWithStats(binary_img)
-
-    n = label[0] - 1
-    data = np.delete(label[2], 0, 0)
-    center = np.delete(label[3], 0, 0)
-
-    max_index = np.argmax(data[:, 4])
+    mu = cv2.moments(binary_img, False)
+    if mu["m00"] != 0:
+        x, y = int(mu["m10"]/mu["m00"]) , int(mu["m01"]/mu["m00"])
+    else:
+        x, y = -1, -1
 
     maxblob = {}
 
-    maxblob["upper_left"] = (data[:, 0][max_index], data[:, 1][max_index])
-    maxblob["width"] = data[:, 2][max_index]
-    maxblob["height"] = data[:, 3][max_index]
-    maxblob["area"] = data[:, 4][max_index]
-    maxblob["center"] = center[max_index]
+    maxblob["area"] = cv2.countNonZero(binary_img)
+    maxblob["center"] = (x, y)
 
     return maxblob
+
 
 def run(l, r):
     if l > 0:
@@ -134,14 +147,12 @@ def run(l, r):
         GPIO.output(10, 1)
         pwmR.ChangeDutyCycle(r)
     else:
-        if r < 100:
+        if r < -100:
             r = -100
         pwmR.ChangeDutyCycle(0)
         GPIO.output(9, 1)
         GPIO.output(10, 0)
         pwmR.ChangeDutyCycle(-r)
-
-    time.sleep(0.1)
 
 
 if __name__ == '__main__':

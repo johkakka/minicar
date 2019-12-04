@@ -7,7 +7,7 @@ lower = np.array([150, 128, 30])
 upper = np.array([180, 255, 255])
 
 #AREA and DISTANCE
-AREA_REFERENCE = 20000  # [px]
+AREA_REFERENCE = 8500  # [px]
 DIST_REFERENCE = 1000   # [mm]
 ##########################################
 
